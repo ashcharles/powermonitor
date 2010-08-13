@@ -1,0 +1,46 @@
+== Power Monitor Notes ==
+This power monitor device measures the DC power on a line and reports this data using a serial connection; accumulated consumption is not reported.  This device also acts as a UART-controlled switch.
+
+Recommended Maximum Input: 25[VDC], 3[A] (constant)
+
+=== Understanding the Electronics ===
+The positive input is connected to a 0.1[ohm], 5[W] power resistor before going to the output via a solid-state switch.  The voltage is measured either side of the resistor, the difference is calculated to determine the current flow, and then the current is multiplied by the input voltage to give the instaneous power. As our ADC can only handle 0-5V, simple voltage dividers reduce the measured voltage to an appropriate level. The VDIV_CALIB_VIN and VDIV_CALIB_VOUT parameters in the code were determined by applying 25[V] to each point individually and dividing by the measured voltage reported by the ATmega8.
+
+=== Using the ATmega8 ===
+This power monitor uses an MR-8 module containing a 16[MHz] ATmega8 microprocessor.  We use its 10-bit ADC to meaure power, some GPIO lines as well as the USART to retrieve data.
+
+==== Building Code ====
+The power monitor code is kept in a git repo here (www.github.com/ashcharles/powermonitor.git).  To use, follow these steps:
+1. Install the gcc-avr compiler (co-exists nicely with other compilers on the system), the avr-libc standard library, and tools for programming the chip such as uisp or avrdude (both are useful).
+e.g. $ sudo apt-get install gcc-avr avr-libc avrdude uisp
+2. Clone the git repository.
+e.g. git clone git://github.com/ashcharles/powermonitor.git
+3. Build the code.  There are several useful make targets:
+- make -- just compiles the code
+- make hex -- compiles (as needed) and creates the hex file for writing to the device.
+- make writeflash -- like 'make hex' but also flashes the code.  This will reset the ATMega and the new code will start immediately
+- make clean -- as per usual
+
+==== Getting Output ====
+Regrettably, getting data from the ATmega8 is not quite as trivial as _printf_ and _scanf_; the helper code in uart.c makes it so.  A 568400 8N1 serial port connection is available on Pin 2 (RXD) and Pin 3 (TXD) of the J1 connector on the MR-8 (corresponds to PB0 and PB1).  Remember to use a TTL-to-serial level converter such as the white iRobot dongles when connecting to your computer; this is 5V serial :(.
+Use a program such as _minicom_ or _kermit_ to read and write to this serial connection.
+e.g.
+ $ sudo apt-get install minicom
+ $ sudo usermod -a -G dialout <username> (to get permissions to use the serial port)
+ $ minicom
+Then do a <Ctrl+A, Z> to adjust the settings to 56800 8N1 with no hardware or software flow control (for kermit, a 'set carrier-watch off' should do the trick).  Typically, you'll connect to /dev/ttyS0.
+
+==== Setting Fuses ====
+There are two registers of fuses (effectively ROM) that control the fundamental operation of the ATmega8; these are read on boot.  The details are given in Tables 87 and 88 of the ATmega8 reference manual.  We found that a high fuse value of *0xd9* and a low fuse value of *0xdf* worked fine.
+
+These fuses can be read and set using either AVRDude or uisp; here are sample commands:
+ Reading: $ uisp -dprog=stk200 -dpart=atmega8 --rd_fuses
+ Writing: $ avrdude -c stk200 -p m8 -P /dev/parport0 -U lfuse:w:0xdf:m -U hfuse:w:0xd9:m
+
+Run the progfuses.sh script to read off the current fuse values and then write the correct values; this only needs to be done once.
+
+==== References ====
+- *avr-libc* is the C standard library for AVR chips: http://www.nongnu.org/avr-libc/user-manual/modules.html
+- Our ATmega8 module is the *MR-8*: http://www.robotstorehk.com/avr/doc/MR-8%20User%20Manual(Eng).pdf
+- The processor reference manual for the ATmega8: http://www.atmel.com/atmel/acrobat/doc2486.pdf
+- Jens's SnowSensor code, code for the mouse scanner and the robostix code provide useful samples
