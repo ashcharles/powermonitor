@@ -86,7 +86,7 @@ PROJECTNAME=powermonitor
 # (NOT .s !!!) for assembly source code files.
 #PRJSRC= main.c checksum.c adc.c ds1339.c delay.c at45db.c sht.c uart.c i2c.c spi.c param.c tsl2563.c ds1721.c 
 # additional includes (e.g. -I/path/to/mydir)
-PRJSRC=main.c uart.c
+PRJSRC=main.c uart.c adc.c timer.c
 INC=-I avrlib -I . 
 
 # libraries to link in (e.g. -lmylib)

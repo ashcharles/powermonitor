@@ -11,31 +11,39 @@ static int uart_getchar(FILE *stream);
 static FILE uartstdout = FDEV_SETUP_STREAM(uart_putchar, NULL, _FDEV_SETUP_WRITE);
 static FILE uartstdin = FDEV_SETUP_STREAM(NULL, uart_getchar, _FDEV_SETUP_READ);
 
-/* Initialize the UART to 9600 Bd, tx/rx, 8N1.
+/* Initialize the UART to BAUD 8N1 in RW mode.
  */
+//-----------------------------------------------------------------------------
 void initUart(void)
 {
-    UBRRH = UBRRH_VALUE;
-    UBRRL = UBRRL_VALUE;
-    UCSRA &= ~(1 << U2X);
-    UCSRB = _BV(TXEN) | _BV(RXEN);
-    stdout = &uartstdout;
-    stdin = &uartstdin;
+  UBRRH = UBRRH_VALUE;
+  UBRRL = UBRRL_VALUE;
+  #if USE_2X
+    UCSRA |= (1 << U2X);
+  #else
+   UCSRA &= ~(1 << U2X);
+  #endif
+  UCSRB = _BV(TXEN) | _BV(RXEN);
+  UCSRC = (1<<URSEL)|(1<<USBS)|(3<<UCSZ0);
+  stdout = &uartstdout;
+  stdin = &uartstdin;
 }
+//-----------------------------------------------------------------------------
 
 /*
  * Send character c down the UART Tx, wait until tx holding register
  * is empty.
  */
+//-----------------------------------------------------------------------------
 static int uart_putchar(char c, FILE *stream)
 {
-    if (c == '\n')
-        uart_putchar('\r', stream);
-    loop_until_bit_is_set(UCSRA, UDRE);
-    UDR = c;
-    return 0;
+  if (c == '\n')
+    uart_putchar('\r', stream);
+  loop_until_bit_is_set(UCSRA, UDRE);
+  UDR = c;
+  return 0;
 }
-
+//-----------------------------------------------------------------------------
 
 /*
  * Receive a character from the UART Rx.
@@ -70,6 +78,7 @@ static int uart_putchar(char c, FILE *stream)
  * Successive calls to uart_getchar() will be satisfied from the
  * internal buffer until that buffer is emptied again.
  */
+//-----------------------------------------------------------------------------
 int uart_getchar(FILE *stream)
 {
   uint8_t c;
@@ -162,4 +171,5 @@ int uart_getchar(FILE *stream)
 
   return c;
 }
+//-----------------------------------------------------------------------------
 
