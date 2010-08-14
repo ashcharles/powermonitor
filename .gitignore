@@ -1,0 +1,6 @@
+*.lst
+*.o
+*~
+powermonitor.hex
+powermonitor.out
+powermonitor.out.map
